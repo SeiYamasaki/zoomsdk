@@ -45,7 +45,21 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: '/bookings',
+                events: '/api/bookings', // ✅ Laravel API から正しいデータを取得
+
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    meridiem: false
+                },
+                eventDisplay: 'block', // ✅ デフォルトの時間表示を無効化（カスタムのタイトルのみ表示）
+
+                // イベントデータをカスタムで表示
+                eventContent: function(arg) {
+                    return {
+                        html: `<b>${arg.event.title}</b>`
+                    }; // ✅ カスタムタイトルを適用
+                },
 
                 // 日付をクリックしたときの処理
                 dateClick: function(info) {
@@ -56,7 +70,7 @@
                 // 予約をクリックしたときの処理
                 eventClick: function(info) {
                     if (confirm("この予約を削除しますか？")) {
-                        fetch(`/api/bookings/${info.event.id}`, { // `/api/` を追加
+                        fetch(`/api/bookings/${info.event.id}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'X-CSRF-TOKEN': document.querySelector(
@@ -82,68 +96,9 @@
                             });
                     }
                 }
-
             });
 
             calendar.render();
-
-            function openModal() {
-                document.getElementById('bookingModal').classList.add('active');
-                document.getElementById('modalOverlay').classList.add('active');
-            }
-
-            function closeModal() {
-                document.getElementById('bookingModal').classList.remove('active');
-                document.getElementById('modalOverlay').classList.remove('active');
-            }
-
-            document.getElementById('closeModal').addEventListener('click', closeModal);
-            document.getElementById('modalOverlay').addEventListener('click', closeModal);
-
-            document.getElementById('saveBooking').addEventListener('click', function() {
-                if (!selectedDate) {
-                    alert("日付が選択されていません");
-                    return;
-                }
-
-                var selectedTime = document.getElementById('timeSlot').value;
-                var startTime = selectedDate + 'T' + selectedTime;
-                var startDateTime = new Date(startTime);
-                var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
-
-                var formattedStart = startDateTime.toISOString().slice(0, 19);
-                var formattedEnd = endDateTime.toISOString().slice(0, 19);
-
-                fetch('/bookings', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            title: "予約",
-                            start: formattedStart,
-                            end: formattedEnd
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(errorData => {
-                                throw new Error(errorData.error || "予約の登録に失敗しました");
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log("予約成功:", data);
-                        calendar.refetchEvents();
-                        closeModal();
-                    })
-                    .catch(error => {
-                        console.error("エラー:", error);
-                        alert("予約の登録に失敗しました。エラー: " + error.message);
-                    });
-            });
         });
     </script>
 

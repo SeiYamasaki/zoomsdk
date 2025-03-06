@@ -9,11 +9,26 @@ use Carbon\Carbon;
 
 class BookingApiController extends Controller
 {
+    /**
+     * 予約一覧を取得 (カレンダー用)
+     */
     public function index()
     {
-        return response()->json(Booking::all(), 200, [], JSON_UNESCAPED_UNICODE);
+        $bookings = Booking::all()->map(function ($booking) {
+            return [
+                'id' => $booking->id,
+                'title' => Carbon::parse($booking->start)->format('H:i') . ' - ' . Carbon::parse($booking->end)->format('H:i') . ' 予約', // ✅ 予約の開始と終了時間を表示
+                'start' => $booking->start,
+                'end' => $booking->end
+            ];
+        });
+
+        return response()->json($bookings, 200, [], JSON_UNESCAPED_UNICODE);
     }
 
+    /**
+     * 予約を削除
+     */
     public function destroy($id)
     {
         try {
@@ -27,7 +42,7 @@ class BookingApiController extends Controller
 
             return response()->json([
                 'message' => '予約が削除されました'
-            ], 200)->header('Content-Type', 'application/json'); // 🔹 return を追加
+            ], 200)->header('Content-Type', 'application/json');
         } catch (\Exception $e) {
             Log::error("予約削除エラー: " . $e->getMessage());
             return response()->json([
@@ -37,6 +52,9 @@ class BookingApiController extends Controller
         }
     }
 
+    /**
+     * 予約を登録
+     */
     public function store(Request $request)
     {
         try {
@@ -60,7 +78,7 @@ class BookingApiController extends Controller
 
             Log::info('予約成功:', ['id' => $booking->id]);
 
-            return response()->json($booking, 201)->header('Content-Type', 'application/json'); // 🔹 return を追加
+            return response()->json($booking, 201)->header('Content-Type', 'application/json');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('バリデーションエラー:', ['message' => $e->getMessage()]);
             return response()->json([
