@@ -79,6 +79,43 @@
                     selectedDate = info.dateStr;
                     console.log("選択された日付:", selectedDate);
                     openModal();
+                },
+
+                // ✅ 予約削除機能を追加
+                eventClick: function(info) {
+                    console.log("削除対象の予約 ID:", info.event.id); // ✅ デバッグログ
+
+                    if (!info.event.id) {
+                        alert("予約IDが取得できません。削除できません。");
+                        return;
+                    }
+
+                    if (confirm("この予約を削除しますか？")) {
+                        fetch(`/bookings/${info.event.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector(
+                                        'meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().then(errorData => {
+                                        throw new Error(errorData.error || "予約の削除に失敗しました");
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log("予約削除成功:", data);
+                                calendar.refetchEvents(); // ✅ 削除後にカレンダーを更新
+                            })
+                            .catch(error => {
+                                console.error("エラー:", error);
+                                alert("予約の削除に失敗しました。エラー: " + error.message);
+                            });
+                    }
                 }
             });
 
@@ -171,6 +208,7 @@
             });
         });
     </script>
+
 
     <style>
         /* オーバーレイ */

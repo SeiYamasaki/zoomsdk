@@ -11,4 +11,3 @@ class Booking extends Model
 
     protected $fillable = ['title', 'start', 'end'];
 }
-
