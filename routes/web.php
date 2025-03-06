@@ -10,6 +10,7 @@ Route::get('/', function () {
 });
 Route::get('/calendar', [BookingController::class, 'index'])->name('calendar');
 Route::get('/bookings', [BookingApiController::class, 'index']);
+Route::post('/bookings', [BookingApiController::class, 'store']);
 
 Route::get('/dashboard', function () {
     return view('dashboard');
