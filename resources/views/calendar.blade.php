@@ -45,29 +45,29 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: '/api/bookings', // ✅ Laravel API から正しいデータを取得
+                events: '/api/bookings', // ✅ Laravel API からデータ取得
 
                 eventTimeFormat: {
                     hour: '2-digit',
                     minute: '2-digit',
                     meridiem: false
                 },
-                eventDisplay: 'block', // ✅ デフォルトの時間表示を無効化（カスタムのタイトルのみ表示）
+                eventDisplay: 'block', // ✅ 予約時間のデフォルト表示を無効化
 
-                // イベントデータをカスタムで表示
+                // ✅ タイトルのみを表示するための設定
                 eventContent: function(arg) {
                     return {
                         html: `<b>${arg.event.title}</b>`
-                    }; // ✅ カスタムタイトルを適用
+                    };
                 },
 
-                // 日付をクリックしたときの処理
+                // ✅ 日付をクリックしたときの処理
                 dateClick: function(info) {
                     selectedDate = info.dateStr;
                     openModal();
                 },
 
-                // 予約をクリックしたときの処理
+                // ✅ 予約をクリックしたときの処理（削除）
                 eventClick: function(info) {
                     if (confirm("この予約を削除しますか？")) {
                         fetch(`/api/bookings/${info.event.id}`, {
@@ -99,6 +99,66 @@
             });
 
             calendar.render();
+
+            function openModal() {
+                document.getElementById('bookingModal').classList.add('active');
+                document.getElementById('modalOverlay').classList.add('active');
+            }
+
+            function closeModal() {
+                document.getElementById('bookingModal').classList.remove('active');
+                document.getElementById('modalOverlay').classList.remove('active');
+            }
+
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('modalOverlay').addEventListener('click', closeModal);
+
+            // ✅ 予約登録処理を修正
+            document.getElementById('saveBooking').addEventListener('click', function() {
+                if (!selectedDate) {
+                    alert("日付が選択されていません");
+                    return;
+                }
+
+                var selectedTime = document.getElementById('timeSlot').value;
+                var startTime = selectedDate + 'T' + selectedTime;
+                var startDateTime = new Date(startTime);
+                var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
+
+                var formattedStart = startDateTime.toISOString().slice(0, 19);
+                var formattedEnd = endDateTime.toISOString().slice(0, 19);
+
+                fetch('/api/bookings', { // ✅ `/api/bookings` に変更
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            title: "予約", // ✅ 固定のタイトル
+                            start: formattedStart,
+                            end: formattedEnd
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                throw new Error(errorData.error || "予約の登録に失敗しました");
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("予約成功:", data);
+                        calendar.refetchEvents();
+                        closeModal();
+                    })
+                    .catch(error => {
+                        console.error("エラー:", error);
+                        alert("予約の登録に失敗しました。エラー: " + error.message);
+                    });
+            });
         });
     </script>
 
