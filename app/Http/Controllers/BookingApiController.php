@@ -17,7 +17,7 @@ class BookingApiController extends Controller
         $bookings = Booking::all()->map(function ($booking) {
             return [
                 'id' => $booking->id,
-                'title' => Carbon::parse($booking->start)->format('H:i') . ' - ' . Carbon::parse($booking->end)->format('H:i') . ' 予約', // ✅ 予約の開始と終了時間を表示
+                'title' => Carbon::parse($booking->start)->format('H:i') . ' - ' . Carbon::parse($booking->end)->format('H:i') . ' 予約',
                 'start' => $booking->start,
                 'end' => $booking->end
             ];
@@ -34,7 +34,22 @@ class BookingApiController extends Controller
         try {
             Log::info("予約削除リクエスト受信: ID=$id");
 
-            $booking = Booking::findOrFail($id); // 🔹 findOrFail を使用
+            // 🔹 **IDが数値かどうかチェック**
+            if (!is_numeric($id)) {
+                Log::error("無効な予約ID: $id");
+                return response()->json([
+                    'error' => '無効な予約IDです'
+                ], 400);
+            }
+
+            // 🔹 **予約を検索**
+            $booking = Booking::find($id); // **`findOrFail` ではなく `find` を使用**
+            if (!$booking) {
+                Log::warning("予約削除エラー (存在しないID): ID=$id");
+                return response()->json([
+                    'error' => '予約が見つかりません'
+                ], 404);
+            }
 
             $booking->delete();
 
@@ -42,15 +57,16 @@ class BookingApiController extends Controller
 
             return response()->json([
                 'message' => '予約が削除されました'
-            ], 200)->header('Content-Type', 'application/json');
+            ], 200);
         } catch (\Exception $e) {
             Log::error("予約削除エラー: " . $e->getMessage());
             return response()->json([
                 'error' => '予約の削除に失敗しました',
                 'details' => $e->getMessage()
-            ], 500)->header('Content-Type', 'application/json');
+            ], 500);
         }
     }
+
 
     /**
      * 予約を登録
@@ -78,19 +94,19 @@ class BookingApiController extends Controller
 
             Log::info('予約成功:', ['id' => $booking->id]);
 
-            return response()->json($booking, 201)->header('Content-Type', 'application/json');
+            return response()->json($booking, 201, [], JSON_UNESCAPED_UNICODE);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('バリデーションエラー:', ['message' => $e->getMessage()]);
             return response()->json([
                 'error' => 'バリデーションエラー',
                 'details' => $e->errors()
-            ], 422)->header('Content-Type', 'application/json');
+            ], 422, [], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             Log::error('予約エラー:', ['message' => $e->getMessage()]);
             return response()->json([
                 'error' => '予約の登録に失敗しました',
                 'details' => $e->getMessage()
-            ], 500)->header('Content-Type', 'application/json');
+            ], 500, [], JSON_UNESCAPED_UNICODE);
         }
     }
 }

@@ -6,6 +6,9 @@
         <div id="calendar"></div>
     </div>
 
+    <!-- CSRFトークンを<meta>タグで設定 -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- モーダルオーバーレイ -->
     <div id="modalOverlay" class="modal-overlay"></div>
 
@@ -45,49 +48,54 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: '/api/bookings', // ✅ Laravel API からデータ取得
+                events: '/bookings',
 
-                eventTimeFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    meridiem: false
-                },
-                eventDisplay: 'block', // ✅ 予約時間のデフォルト表示を無効化
-
-                // ✅ タイトルのみを表示するための設定
-                eventContent: function(arg) {
-                    return {
-                        html: `<b>${arg.event.title}</b>`
-                    };
-                },
-
-                // ✅ 日付をクリックしたときの処理
                 dateClick: function(info) {
                     selectedDate = info.dateStr;
+                    console.log("選択された日付:", selectedDate);
                     openModal();
                 },
 
-                // ✅ 予約をクリックしたときの処理（削除）
+                // **予約削除機能**
                 eventClick: function(info) {
+                    console.log("削除対象の予約 ID:", info.event.id); // **予約IDの確認**
+
+                    if (!info.event.id) {
+                        alert("予約IDが取得できません。削除できません。");
+                        return;
+                    }
+
                     if (confirm("この予約を削除しますか？")) {
-                        fetch(`/api/bookings/${info.event.id}`, {
+                        fetch(`/api/bookings/${info.event.id}`, { // 👈 `api/` を追加
                                 method: 'DELETE',
                                 headers: {
+                                    'Content-Type': 'application/json',
                                     'X-CSRF-TOKEN': document.querySelector(
-                                        'meta[name="csrf-token"]').getAttribute('content'),
-                                    'Content-Type': 'application/json'
+                                        'meta[name="csrf-token"]').getAttribute('content')
                                 }
                             })
+
                             .then(response => {
+                                // **レスポンスが JSON かどうかを確認**
+                                const contentType = response.headers.get("content-type");
                                 if (!response.ok) {
-                                    return response.text().then(text => {
-                                        throw new Error("サーバーからのレスポンス: " + text);
-                                    });
+                                    if (contentType && contentType.includes("application/json")) {
+                                        return response.json().then(errorData => {
+                                            throw new Error(errorData.error ||
+                                                "予約の削除に失敗しました");
+                                        });
+                                    } else {
+                                        return response.text().then(text => {
+                                            throw new Error("サーバーエラー: " + text);
+                                        });
+                                    }
                                 }
                                 return response.json();
                             })
                             .then(data => {
                                 console.log("予約削除成功:", data);
+
+                                // **削除後にカレンダーを更新**
                                 calendar.refetchEvents();
                             })
                             .catch(error => {
@@ -96,24 +104,40 @@
                             });
                     }
                 }
+
             });
 
             calendar.render();
 
             function openModal() {
-                document.getElementById('bookingModal').classList.add('active');
-                document.getElementById('modalOverlay').classList.add('active');
+                let modal = document.getElementById('bookingModal');
+                let overlay = document.getElementById('modalOverlay');
+
+                modal.style.display = "block";
+                overlay.style.display = "block";
+
+                setTimeout(() => {
+                    modal.classList.add('active');
+                    overlay.classList.add('active');
+                }, 10);
             }
 
             function closeModal() {
-                document.getElementById('bookingModal').classList.remove('active');
-                document.getElementById('modalOverlay').classList.remove('active');
+                let modal = document.getElementById('bookingModal');
+                let overlay = document.getElementById('modalOverlay');
+
+                modal.classList.remove('active');
+                overlay.classList.remove('active');
+
+                setTimeout(() => {
+                    modal.style.display = "none";
+                    overlay.style.display = "none";
+                }, 300);
             }
 
             document.getElementById('closeModal').addEventListener('click', closeModal);
             document.getElementById('modalOverlay').addEventListener('click', closeModal);
 
-            // ✅ 予約登録処理を修正
             document.getElementById('saveBooking').addEventListener('click', function() {
                 if (!selectedDate) {
                     alert("日付が選択されていません");
@@ -128,7 +152,13 @@
                 var formattedStart = startDateTime.toISOString().slice(0, 19);
                 var formattedEnd = endDateTime.toISOString().slice(0, 19);
 
-                fetch('/api/bookings', { // ✅ `/api/bookings` に変更
+                console.log("送信データ:", {
+                    title: "予約",
+                    start: formattedStart,
+                    end: formattedEnd
+                });
+
+                fetch('/bookings', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -136,19 +166,12 @@
                                 .getAttribute('content')
                         },
                         body: JSON.stringify({
-                            title: "予約", // ✅ 固定のタイトル
+                            title: "予約",
                             start: formattedStart,
                             end: formattedEnd
                         })
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(errorData => {
-                                throw new Error(errorData.error || "予約の登録に失敗しました");
-                            });
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         console.log("予約成功:", data);
                         calendar.refetchEvents();
@@ -163,7 +186,7 @@
     </script>
 
     <style>
-        /* オーバーレイ（背景を暗くする） */
+        /* オーバーレイ */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -177,83 +200,60 @@
             transition: opacity 0.3s ease-in-out;
         }
 
-        /* モーダル本体 */
+        /* モーダル */
         .modal {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             text-align: center;
-            width: 350px;
+            width: 400px;
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-            transform: translate(-50%, -45%);
-        }
-
-        /* モーダルがアクティブな時の表示 */
-        .modal.active,
-        .modal-overlay.active {
-            display: block;
-            opacity: 1;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            backdrop-filter: blur(10px);
         }
 
         .modal.active {
-            transform: translate(-50%, -50%);
-        }
-
-        /* タイトル */
-        .modal-title {
-            font-size: 18px;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-
-        /* ラベル */
-        .modal-label {
-            font-size: 14px;
-            display: block;
-            margin-bottom: 5px;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
         }
 
         /* セレクトボックス */
         .modal-select {
             width: 100%;
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            text-align-last: center;
         }
 
-        /* ボタンのスタイル */
-        .modal-actions {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
+        /* ボタン */
         .btn {
-            padding: 10px 15px;
+            padding: 12px 16px;
             border: none;
             cursor: pointer;
-            font-size: 14px;
-            border-radius: 5px;
-            transition: 0.3s;
+            font-size: 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease-in-out;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #007bff, #0056b3);
+            background: linear-gradient(135deg, #007bff, #004494);
             color: white;
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #0056b3, #004494);
+            background: linear-gradient(135deg, #0056b3, #002c76);
+            transform: translateY(-3px);
         }
 
         .btn-secondary {
@@ -262,7 +262,7 @@
         }
 
         .btn-secondary:hover {
-            background: #bbb;
+            background: rgba(200, 200, 200, 0.6);
         }
     </style>
 @endsection
