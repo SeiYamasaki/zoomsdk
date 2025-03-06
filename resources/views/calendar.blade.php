@@ -48,68 +48,44 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: '/bookings',
+
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+
+                // ✅ 予約データ取得時のフォーマットを修正
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    fetch('/bookings')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log("取得したイベントデータ:", data); // ✅ デバッグログ
+                            let formattedEvents = data.map(event => ({
+                                id: event.id,
+                                title: "予約",
+                                start: event.start,
+                                end: event.end
+                            }));
+                            successCallback(formattedEvents);
+                        })
+                        .catch(error => {
+                            console.error("イベントの取得エラー:", error);
+                            failureCallback(error);
+                        });
+                },
 
                 dateClick: function(info) {
                     selectedDate = info.dateStr;
                     console.log("選択された日付:", selectedDate);
                     openModal();
-                },
-
-                // **予約削除機能**
-                eventClick: function(info) {
-                    console.log("削除対象の予約 ID:", info.event.id); // **予約IDの確認**
-
-                    if (!info.event.id) {
-                        alert("予約IDが取得できません。削除できません。");
-                        return;
-                    }
-
-                    if (confirm("この予約を削除しますか？")) {
-                        fetch(`/api/bookings/${info.event.id}`, { // 👈 `api/` を追加
-                                method: 'DELETE',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector(
-                                        'meta[name="csrf-token"]').getAttribute('content')
-                                }
-                            })
-
-                            .then(response => {
-                                // **レスポンスが JSON かどうかを確認**
-                                const contentType = response.headers.get("content-type");
-                                if (!response.ok) {
-                                    if (contentType && contentType.includes("application/json")) {
-                                        return response.json().then(errorData => {
-                                            throw new Error(errorData.error ||
-                                                "予約の削除に失敗しました");
-                                        });
-                                    } else {
-                                        return response.text().then(text => {
-                                            throw new Error("サーバーエラー: " + text);
-                                        });
-                                    }
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                console.log("予約削除成功:", data);
-
-                                // **削除後にカレンダーを更新**
-                                calendar.refetchEvents();
-                            })
-                            .catch(error => {
-                                console.error("エラー:", error);
-                                alert("予約の削除に失敗しました。エラー: " + error.message);
-                            });
-                    }
                 }
-
             });
 
             calendar.render();
 
             function openModal() {
+                console.log("モーダルを開く");
                 let modal = document.getElementById('bookingModal');
                 let overlay = document.getElementById('modalOverlay');
 
@@ -149,14 +125,24 @@
                 var startDateTime = new Date(startTime);
                 var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
 
-                var formattedStart = startDateTime.toISOString().slice(0, 19);
-                var formattedEnd = endDateTime.toISOString().slice(0, 19);
+                // ✅ Laravel で適切に処理できる `YYYY-MM-DD HH:MM:SS` に変換
+                var formattedStart = startDateTime.getFullYear() + "-" +
+                    ("0" + (startDateTime.getMonth() + 1)).slice(-2) + "-" +
+                    ("0" + startDateTime.getDate()).slice(-2) + " " +
+                    ("0" + startDateTime.getHours()).slice(-2) + ":" +
+                    ("0" + startDateTime.getMinutes()).slice(-2) + ":00";
 
-                console.log("送信データ:", {
+                var formattedEnd = endDateTime.getFullYear() + "-" +
+                    ("0" + (endDateTime.getMonth() + 1)).slice(-2) + "-" +
+                    ("0" + endDateTime.getDate()).slice(-2) + " " +
+                    ("0" + endDateTime.getHours()).slice(-2) + ":" +
+                    ("0" + endDateTime.getMinutes()).slice(-2) + ":00";
+
+                console.log("送信データ:", JSON.stringify({
                     title: "予約",
                     start: formattedStart,
                     end: formattedEnd
-                });
+                }));
 
                 fetch('/bookings', {
                         method: 'POST',
@@ -174,7 +160,8 @@
                     .then(response => response.json())
                     .then(data => {
                         console.log("予約成功:", data);
-                        calendar.refetchEvents();
+                        calendar.refetchEvents(); // ✅ **予約登録後にカレンダーを更新**
+                        console.log("カレンダー更新完了");
                         closeModal();
                     })
                     .catch(error => {

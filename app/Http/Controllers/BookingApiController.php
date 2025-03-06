@@ -76,16 +76,16 @@ class BookingApiController extends Controller
         try {
             Log::info('予約リクエスト受信:', $request->all());
 
-            // 🔹 **バリデーション**
+            // 🔹 **バリデーション修正 (`date_format:Y-m-d H:i:s`)**
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'start' => 'required|date_format:Y-m-d\TH:i:s',
-                'end' => 'required|date_format:Y-m-d\TH:i:s|after:start',
+                'start' => 'required|date_format:Y-m-d H:i:s',
+                'end' => 'required|date_format:Y-m-d H:i:s|after:start',
             ]);
 
-            // 🔹 **日本時間に変換**
-            $validated['start'] = Carbon::parse($validated['start'])->setTimezone('Asia/Tokyo');
-            $validated['end'] = Carbon::parse($validated['end'])->setTimezone('Asia/Tokyo');
+            // 🔹 **データフォーマット統一 (日本時間に変換)**
+            $validated['start'] = Carbon::parse($validated['start'])->setTimezone('Asia/Tokyo')->format('Y-m-d H:i:s');
+            $validated['end'] = Carbon::parse($validated['end'])->setTimezone('Asia/Tokyo')->format('Y-m-d H:i:s');
 
             // 🔹 **データの保存**
             $booking = new Booking();
@@ -96,7 +96,7 @@ class BookingApiController extends Controller
 
             return response()->json($booking, 201, [], JSON_UNESCAPED_UNICODE);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('バリデーションエラー:', ['message' => $e->getMessage()]);
+            Log::error('バリデーションエラー:', ['details' => $e->errors()]);
             return response()->json([
                 'error' => 'バリデーションエラー',
                 'details' => $e->errors()
