@@ -47,10 +47,42 @@
                 },
                 events: '/bookings',
 
+                // 日付をクリックしたときの処理
                 dateClick: function(info) {
                     selectedDate = info.dateStr;
                     openModal();
+                },
+
+                // 予約をクリックしたときの処理
+                eventClick: function(info) {
+                    if (confirm("この予約を削除しますか？")) {
+                        fetch(`/api/bookings/${info.event.id}`, { // `/api/` を追加
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector(
+                                        'meta[name="csrf-token"]').getAttribute('content'),
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.text().then(text => {
+                                        throw new Error("サーバーからのレスポンス: " + text);
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log("予約削除成功:", data);
+                                calendar.refetchEvents();
+                            })
+                            .catch(error => {
+                                console.error("エラー:", error);
+                                alert("予約の削除に失敗しました。エラー: " + error.message);
+                            });
+                    }
                 }
+
             });
 
             calendar.render();
