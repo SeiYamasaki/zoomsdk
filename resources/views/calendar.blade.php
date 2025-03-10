@@ -88,6 +88,19 @@
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             var selectedDate = '';
+            // 🎨 視認性の高いカラフルな色リスト
+            var colors = [
+                "#E63946", // 赤（明るめ）
+                "#F4A261", // オレンジ
+                "#2A9D8F", // 緑（深め）
+                "#264653", // 青（ダーク）
+                "#457B9D", // 青（やや明るめ）
+                "#8A4FFF", // 紫
+                "#E76F51", // ピンク系オレンジ
+                "#D62828", // 深い赤
+                "#1D3557", // 濃い青
+                "#F77F00", // 濃いオレンジ
+            ];
 
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -95,8 +108,20 @@
                 editable: true,
                 headerToolbar: {
                     left: 'prev,next today',
-                    center: 'title',
+                    center: 'title', // ✅ ここに表示される
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+
+                buttonText: {
+                    today: '今日', // 'today' ボタンの表示を変更
+                    month: '月表示', // 'month' ボタンを '月表示' に変更
+                    week: '週表示', // 'week' ボタンを '週表示' に変更
+                    day: '日表示' // 'day' ボタンを '日表示' に変更
+                },
+
+                titleFormat: { // ✅ タイトルのフォーマットを変更
+                    year: 'numeric', // 西暦（例: 2025）
+                    month: 'long' // 月のフルネーム（例: "March"）
                 },
 
                 eventTimeFormat: {
@@ -105,6 +130,49 @@
                     hour12: false
                 },
 
+                // ✅ 日本語の月名を追加
+                datesSet: function(info) {
+                    const monthNames = {
+                        "January": "1月",
+                        "February": "2月",
+                        "March": "3月",
+                        "April": "4月",
+                        "May": "5月",
+                        "June": "6月",
+                        "July": "7月",
+                        "August": "8月",
+                        "September": "9月",
+                        "October": "10月",
+                        "November": "11月",
+                        "December": "12月"
+                    };
+
+                    // 現在のタイトルを取得（例: "March 2025"）
+                    let titleElement = document.querySelector('.fc-toolbar-title');
+                    if (titleElement) {
+                        let currentTitle = titleElement.textContent; // 現在のタイトル（英語）
+
+                        // 英語の月を取得して日本語に変換
+                        Object.keys(monthNames).forEach(englishMonth => {
+                            if (currentTitle.includes(englishMonth)) {
+                                let japaneseMonth = monthNames[englishMonth];
+                                titleElement.textContent = currentTitle + " (" + japaneseMonth +
+                                    ")";
+                            }
+                        });
+                    }
+                },
+            
+            // ✅ カレンダーの日付の数字だけをカラフルにする
+            dayCellDidMount: function(info) {
+                    let dayNumberEl = info.el.querySelector('.fc-daygrid-day-number');
+                    if (dayNumberEl) {
+                        let randomColor = colors[Math.floor(Math.random() * colors.length)];
+                        dayNumberEl.style.color = randomColor; // 数字の色を変更
+                        dayNumberEl.style.fontWeight = "bold"; // 太字にする
+                        dayNumberEl.style.fontSize = "1.2em"; // 少し大きめに
+                    }
+                },
                 // ✅ 予約データ取得時のフォーマットを修正
                 events: function(fetchInfo, successCallback, failureCallback) {
                     fetch('/bookings')
@@ -168,112 +236,112 @@
                             });
                     }
                 }
-            });
+        });
 
-            calendar.render();
+        calendar.render();
 
-            function openModal() {
-                console.log("モーダルを開く");
-                let modal = document.getElementById('bookingModal');
-                let overlay = document.getElementById('modalOverlay');
+        function openModal() {
+            console.log("モーダルを開く");
+            let modal = document.getElementById('bookingModal');
+            let overlay = document.getElementById('modalOverlay');
 
-                modal.classList.remove('hidden');
-                overlay.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            overlay.classList.remove('hidden');
 
-                setTimeout(() => {
-                    modal.classList.add('active');
-                    overlay.classList.add('active');
-                }, 10);
-            }
+            setTimeout(() => {
+                modal.classList.add('active');
+                overlay.classList.add('active');
+            }, 10);
+        }
 
-            function closeModal() {
-                let modal = document.getElementById('bookingModal');
-                let overlay = document.getElementById('modalOverlay');
+        function closeModal() {
+            let modal = document.getElementById('bookingModal');
+            let overlay = document.getElementById('modalOverlay');
 
-                modal.classList.remove('active');
-                overlay.classList.remove('active');
+            modal.classList.remove('active');
+            overlay.classList.remove('active');
 
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    overlay.classList.add('hidden');
-                }, 300);
-            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+            }, 300);
+        }
 
-            document.getElementById('closeModal').addEventListener('click', closeModal);
-            document.getElementById('modalOverlay').addEventListener('click', closeModal);
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('modalOverlay').addEventListener('click', closeModal);
 
-            document.getElementById('saveBooking').addEventListener('click', function() {
-                if (!selectedDate) {
-                    alert("日付が選択されていません");
-                    return;
-                }
+        document.getElementById('saveBooking').addEventListener('click', function() {
+        if (!selectedDate) {
+            alert("日付が選択されていません");
+            return;
+        }
 
-                var selectedTime = document.getElementById('timeSlot').value;
-                var startTime = selectedDate + 'T' + selectedTime;
-                var startDateTime = new Date(startTime);
-                var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
+        var selectedTime = document.getElementById('timeSlot').value;
+        var startTime = selectedDate + 'T' + selectedTime;
+        var startDateTime = new Date(startTime);
+        var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
 
-                // ✅ タイトルを取得
-                var bookingTitle = document.getElementById('bookingTitle').value || "オンラインミーティング";
+        // ✅ タイトルを取得
+        var bookingTitle = document.getElementById('bookingTitle').value || "オンラインミーティング";
 
-                // ✅ Laravel で適切に処理できる `YYYY-MM-DD HH:MM:SS` に変換
-                var formattedStart = startDateTime.getFullYear() + "-" +
-                    ("0" + (startDateTime.getMonth() + 1)).slice(-2) + "-" +
-                    ("0" + startDateTime.getDate()).slice(-2) + " " +
-                    ("0" + startDateTime.getHours()).slice(-2) + ":" +
-                    ("0" + startDateTime.getMinutes()).slice(-2) + ":00";
+        // ✅ Laravel で適切に処理できる `YYYY-MM-DD HH:MM:SS` に変換
+        var formattedStart = startDateTime.getFullYear() + "-" +
+            ("0" + (startDateTime.getMonth() + 1)).slice(-2) + "-" +
+            ("0" + startDateTime.getDate()).slice(-2) + " " +
+            ("0" + startDateTime.getHours()).slice(-2) + ":" +
+            ("0" + startDateTime.getMinutes()).slice(-2) + ":00";
 
-                var formattedEnd = endDateTime.getFullYear() + "-" +
-                    ("0" + (endDateTime.getMonth() + 1)).slice(-2) + "-" +
-                    ("0" + endDateTime.getDate()).slice(-2) + " " +
-                    ("0" + endDateTime.getHours()).slice(-2) + ":" +
-                    ("0" + endDateTime.getMinutes()).slice(-2) + ":00";
+        var formattedEnd = endDateTime.getFullYear() + "-" +
+            ("0" + (endDateTime.getMonth() + 1)).slice(-2) + "-" +
+            ("0" + endDateTime.getDate()).slice(-2) + " " +
+            ("0" + endDateTime.getHours()).slice(-2) + ":" +
+            ("0" + endDateTime.getMinutes()).slice(-2) + ":00";
 
-                // Zoom関連の情報を取得
-                var participantEmail = document.getElementById('participantEmail').value;
-                var waitingRoom = document.getElementById('waitingRoom').checked;
-                var createZoomMeeting = document.getElementById('createZoomMeeting').checked;
+        // Zoom関連の情報を取得
+        var participantEmail = document.getElementById('participantEmail').value;
+        var waitingRoom = document.getElementById('waitingRoom').checked;
+        var createZoomMeeting = document.getElementById('createZoomMeeting').checked;
 
-                console.log("送信データ:", JSON.stringify({
+        console.log("送信データ:", JSON.stringify({
+            title: bookingTitle,
+            start: formattedStart,
+            end: formattedEnd,
+            participant_email: participantEmail,
+            waiting_room: waitingRoom,
+            create_zoom_meeting: createZoomMeeting
+        }));
+
+        fetch('/bookings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                        .getAttribute('content')
+                },
+                body: JSON.stringify({
                     title: bookingTitle,
                     start: formattedStart,
                     end: formattedEnd,
                     participant_email: participantEmail,
                     waiting_room: waitingRoom,
                     create_zoom_meeting: createZoomMeeting
-                }));
-
-                fetch('/bookings', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                .getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            title: bookingTitle,
-                            start: formattedStart,
-                            end: formattedEnd,
-                            participant_email: participantEmail,
-                            waiting_room: waitingRoom,
-                            create_zoom_meeting: createZoomMeeting
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("予約成功:", data);
-                        if (data.zoom_meeting_url) {
-                            alert("Zoom会議URLが生成されました: " + data.zoom_meeting_url);
-                        }
-                        calendar.refetchEvents(); // ✅ 予約登録後にカレンダーを更新
-                        console.log("カレンダー更新完了");
-                        closeModal();
-                    })
-                    .catch(error => {
-                        console.error("エラー:", error);
-                        alert("予約の登録に失敗しました。エラー: " + error.message);
-                    });
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("予約成功:", data);
+                if (data.zoom_meeting_url) {
+                    alert("Zoom会議URLが生成されました: " + data.zoom_meeting_url);
+                }
+                calendar.refetchEvents(); // ✅ 予約登録後にカレンダーを更新
+                console.log("カレンダー更新完了");
+                closeModal();
+            })
+            .catch(error => {
+                console.error("エラー:", error);
+                alert("予約の登録に失敗しました。エラー: " + error.message);
             });
+        });
         });
     </script>
 
