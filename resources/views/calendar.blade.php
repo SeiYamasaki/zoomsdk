@@ -1,45 +1,84 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container">
-        <h2>予約カレンダー</h2>
-        <div class="mb-3">
-            <a href="{{ route('bookings.list') }}" class="btn btn-info">予約一覧を表示</a>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 flex justify-between items-center">
+            <h2 class="text-2xl font-semibold text-gray-800">予約カレンダー</h2>
+            <a href="{{ route('bookings.list') }}"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                予約一覧を表示
+            </a>
         </div>
-        <div id="calendar"></div>
+        <div class="bg-white shadow-lg rounded-lg p-6">
+            <div id="calendar"></div>
+        </div>
     </div>
 
     <!-- CSRFトークンを<meta>タグで設定 -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- モーダルオーバーレイ -->
-    <div id="modalOverlay" class="modal-overlay"></div>
+    <div id="modalOverlay"
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300 ease-in-out"></div>
 
     <!-- モーダル -->
-    <div id="bookingModal" class="modal">
-        <h3 class="modal-title">予約を追加</h3>
+    <div id="bookingModal"
+        class="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl z-50 w-full max-w-md p-6 hidden transition-all duration-300 ease-in-out">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">予約を追加</h3>
 
-        <label class="modal-label">時間:</label>
-        <select id="timeSlot" class="modal-select">
-            @for ($hour = 10; $hour < 24; $hour++)
-                <option value="{{ sprintf('%02d:00:00', $hour) }}">{{ sprintf('%02d:00', $hour) }} -
-                    {{ sprintf('%02d:30', $hour) }}</option>
-                <option value="{{ sprintf('%02d:30:00', $hour) }}">{{ sprintf('%02d:30', $hour) }} -
-                    {{ sprintf('%02d:00', $hour + 1) }}</option>
-            @endfor
-        </select>
-
-        <label class="modal-label">参加者メールアドレス:</label>
-        <input type="email" id="participantEmail" class="modal-input" placeholder="参加者のメールアドレス">
-
-        <div class="modal-checkbox">
-            <input type="checkbox" id="waitingRoom" checked>
-            <label for="waitingRoom">待機室を有効にする</label>
+        <div class="mb-4">
+            <label for="bookingTitle" class="block text-sm font-medium text-gray-700 mb-1">予約タイトル:</label>
+            <input type="text" id="bookingTitle"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="予約タイトル" value="オンラインミーティング">
         </div>
 
-        <div class="modal-actions">
-            <button id="saveBooking" class="btn btn-primary">予約する</button>
-            <button id="closeModal" class="btn btn-secondary">キャンセル</button>
+        <div class="mb-4">
+            <label for="timeSlot" class="block text-sm font-medium text-gray-700 mb-1">時間:</label>
+            <select id="timeSlot"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                @for ($hour = 10; $hour < 24; $hour++)
+                    <option value="{{ sprintf('%02d:00:00', $hour) }}">{{ sprintf('%02d:00', $hour) }} -
+                        {{ sprintf('%02d:30', $hour) }}</option>
+                    <option value="{{ sprintf('%02d:30:00', $hour) }}">{{ sprintf('%02d:30', $hour) }} -
+                        {{ sprintf('%02d:00', $hour + 1) }}</option>
+                @endfor
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label for="participantEmail" class="block text-sm font-medium text-gray-700 mb-1">参加者メールアドレス:</label>
+            <input type="email" id="participantEmail"
+                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="参加者のメールアドレス">
+        </div>
+
+        <div class="mb-4 flex items-center">
+            <input type="checkbox" id="waitingRoom"
+                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+            <label for="waitingRoom" class="ml-2 block text-sm text-gray-700">待機室を有効にする</label>
+        </div>
+
+        <div class="mb-6 flex items-center">
+            <input type="checkbox" id="createZoomMeeting"
+                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+            <label for="createZoomMeeting" class="ml-2 block text-sm text-gray-700">Zoom会議を自動作成する</label>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+            <button id="closeModal"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                キャンセル
+            </button>
+            <button id="saveBooking"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                予約する
+            </button>
         </div>
     </div>
 
@@ -121,6 +160,7 @@
                             .then(data => {
                                 console.log("予約削除成功:", data);
                                 calendar.refetchEvents(); // ✅ 削除後にカレンダーを更新
+                                alert("予約を削除しました。一覧ページを開いている場合は再読み込みしてください。");
                             })
                             .catch(error => {
                                 console.error("エラー:", error);
@@ -137,8 +177,8 @@
                 let modal = document.getElementById('bookingModal');
                 let overlay = document.getElementById('modalOverlay');
 
-                modal.style.display = "block";
-                overlay.style.display = "block";
+                modal.classList.remove('hidden');
+                overlay.classList.remove('hidden');
 
                 setTimeout(() => {
                     modal.classList.add('active');
@@ -154,8 +194,8 @@
                 overlay.classList.remove('active');
 
                 setTimeout(() => {
-                    modal.style.display = "none";
-                    overlay.style.display = "none";
+                    modal.classList.add('hidden');
+                    overlay.classList.add('hidden');
                 }, 300);
             }
 
@@ -173,6 +213,9 @@
                 var startDateTime = new Date(startTime);
                 var endDateTime = new Date(startDateTime.getTime() + (30 * 60 * 1000));
 
+                // ✅ タイトルを取得
+                var bookingTitle = document.getElementById('bookingTitle').value || "オンラインミーティング";
+
                 // ✅ Laravel で適切に処理できる `YYYY-MM-DD HH:MM:SS` に変換
                 var formattedStart = startDateTime.getFullYear() + "-" +
                     ("0" + (startDateTime.getMonth() + 1)).slice(-2) + "-" +
@@ -189,13 +232,15 @@
                 // Zoom関連の情報を取得
                 var participantEmail = document.getElementById('participantEmail').value;
                 var waitingRoom = document.getElementById('waitingRoom').checked;
+                var createZoomMeeting = document.getElementById('createZoomMeeting').checked;
 
                 console.log("送信データ:", JSON.stringify({
-                    title: "予約",
+                    title: bookingTitle,
                     start: formattedStart,
                     end: formattedEnd,
                     participant_email: participantEmail,
-                    waiting_room: waitingRoom
+                    waiting_room: waitingRoom,
+                    create_zoom_meeting: createZoomMeeting
                 }));
 
                 fetch('/bookings', {
@@ -206,17 +251,21 @@
                                 .getAttribute('content')
                         },
                         body: JSON.stringify({
-                            title: "予約",
+                            title: bookingTitle,
                             start: formattedStart,
                             end: formattedEnd,
                             participant_email: participantEmail,
-                            waiting_room: waitingRoom
+                            waiting_room: waitingRoom,
+                            create_zoom_meeting: createZoomMeeting
                         })
                     })
                     .then(response => response.json())
                     .then(data => {
                         console.log("予約成功:", data);
-                        calendar.refetchEvents(); // ✅ **予約登録後にカレンダーを更新**
+                        if (data.zoom_meeting_url) {
+                            alert("Zoom会議URLが生成されました: " + data.zoom_meeting_url);
+                        }
+                        calendar.refetchEvents(); // ✅ 予約登録後にカレンダーを更新
                         console.log("カレンダー更新完了");
                         closeModal();
                     })
@@ -230,83 +279,61 @@
 
 
     <style>
-        /* オーバーレイ */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        /* モーダル */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            background: rgba(255, 255, 255, 0.8);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            width: 400px;
-            z-index: 1000;
-            opacity: 0;
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            backdrop-filter: blur(10px);
-        }
-
-        .modal.active {
+        /* モーダルアニメーション用 */
+        #bookingModal.active {
+            opacity: 1;
             transform: translate(-50%, -50%) scale(1);
+        }
+
+        #bookingModal {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+
+        #modalOverlay.active {
             opacity: 1;
         }
 
-        /* セレクトボックス */
-        .modal-select {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            text-align-last: center;
+        #modalOverlay {
+            opacity: 0;
         }
 
-        /* ボタン */
-        .btn {
-            padding: 12px 16px;
-            border: none;
+        /* FullCalendarのスタイル調整 */
+        .fc .fc-toolbar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .fc .fc-button-primary {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        .fc .fc-button-primary:hover {
+            background-color: #4338ca;
+            border-color: #4338ca;
+        }
+
+        .fc .fc-button-primary:disabled {
+            background-color: #6366f1;
+            border-color: #6366f1;
+        }
+
+        .fc-day-today {
+            background-color: #eef2ff !important;
+        }
+
+        .fc-event {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .fc-daygrid-day:hover {
+            background-color: #f9fafb;
             cursor: pointer;
-            font-size: 15px;
-            border-radius: 8px;
-            transition: all 0.3s ease-in-out;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #007bff, #004494);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #0056b3, #002c76);
-            transform: translateY(-3px);
-        }
-
-        .btn-secondary {
-            background: #ddd;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(200, 200, 200, 0.6);
         }
     </style>
 @endsection

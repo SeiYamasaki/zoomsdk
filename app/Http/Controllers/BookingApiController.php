@@ -109,6 +109,7 @@ class BookingApiController extends Controller
                 'participant_email' => 'nullable|email',
                 'waiting_room' => 'nullable|boolean',
                 'max_participants' => 'nullable|integer|min:1|max:100',
+                'create_zoom_meeting' => 'nullable|boolean',
             ]);
 
             // データフォーマット統一 (日本時間に変換)
@@ -118,22 +119,34 @@ class BookingApiController extends Controller
             // デフォルト値の設定
             $validated['waiting_room'] = $validated['waiting_room'] ?? true;
             $validated['max_participants'] = $validated['max_participants'] ?? 10;
+            $createZoomMeeting = $validated['create_zoom_meeting'] ?? true;
+            unset($validated['create_zoom_meeting']); // Bookingモデルには保存しない
 
-            // Zoom会議の作成
-            $zoomMeeting = $this->zoomService->createMeeting([
-                'title' => $validated['title'],
-                'start' => $validated['start'],
-                'end' => $validated['end'],
-                'waiting_room' => $validated['waiting_room'],
-            ]);
+            // Zoom会議の作成（フラグがtrueの場合のみ）
+            if ($createZoomMeeting) {
+                // 新しいZoomServiceのcreateMeetingメソッドに合わせた形式で呼び出し
+                $startTimeIso = Carbon::parse($validated['start'])->toIso8601String();
+                $zoomMeeting = $this->zoomService->createMeeting($validated['title'], $startTimeIso);
 
-            if ($zoomMeeting) {
-                // Zoom会議情報を追加
-                $validated['zoom_meeting_id'] = $zoomMeeting['id'];
-                $validated['zoom_meeting_url'] = $zoomMeeting['join_url'];
-                $validated['zoom_meeting_password'] = $zoomMeeting['password'] ?? null;
+                // エラーチェック
+                if (isset($zoomMeeting['error'])) {
+                    Log::error('Zoom会議の作成に失敗しました。', [
+                        'error' => $zoomMeeting['error'],
+                        'details' => $zoomMeeting
+                    ]);
+                    // エラーがあっても予約自体は作成する
+                } else {
+                    // Zoom会議情報を追加
+                    $validated['zoom_meeting_id'] = $zoomMeeting['id'];
+                    $validated['zoom_meeting_url'] = $zoomMeeting['join_url'];
+                    $validated['zoom_meeting_password'] = $zoomMeeting['password'] ?? null;
+                    Log::info('Zoom会議が作成されました。', [
+                        'meeting_id' => $zoomMeeting['id'],
+                        'join_url' => $zoomMeeting['join_url']
+                    ]);
+                }
             } else {
-                Log::warning('Zoom会議の作成に失敗しましたが、予約は作成します。');
+                Log::info('Zoom会議の作成はスキップされました（ユーザー選択）');
             }
 
             // データの保存
@@ -141,7 +154,11 @@ class BookingApiController extends Controller
             $booking->fill($validated);
             $booking->save();
 
-            Log::info('予約成功:', ['id' => $booking->id, 'zoom_meeting_id' => $booking->zoom_meeting_id ?? 'なし']);
+            Log::info('予約成功:', [
+                'id' => $booking->id,
+                'zoom_meeting_id' => $booking->zoom_meeting_id ?? 'なし',
+                'zoom_meeting_url' => $booking->zoom_meeting_url ?? 'なし'
+            ]);
 
             return response()->json($booking, 201, [], JSON_UNESCAPED_UNICODE);
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -12,6 +12,7 @@ Route::get('/', function () {
 Route::get('/calendar', [BookingController::class, 'index'])->name('calendar');
 Route::get('/bookings', [BookingApiController::class, 'index']);
 Route::post('/bookings', [BookingApiController::class, 'store']);
+Route::delete('/bookings/{id}', [BookingApiController::class, 'destroy']);
 
 // 予約一覧取得のためのAPIルート
 Route::get('/api/bookings', [BookingApiController::class, 'list']);
@@ -34,7 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // 🔹 予約削除ルートを追加
+    // 🔹 予約削除ルート（管理画面から使用）
     Route::delete('/bookings/{id}', [BookingApiController::class, 'destroy'])->name('bookings.destroy');
 });
 
