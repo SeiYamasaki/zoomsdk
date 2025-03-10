@@ -11,6 +11,10 @@
                 <div class="p-6 text-gray-900">
                     {{ __("You're logged in!") }}
                 </div>
+                <div class="p-6 text-gray-900">
+                    <a href="{{ route('bookings.list') }}" class="btn btn-primary">予約一覧に移動</a>
+                    <a href="{{ route('meetings.register', ['id' => 1]) }}" class="btn btn-success">ミーティング参加登録</a>
+                </div>
             </div>
         </div>
     </div>
