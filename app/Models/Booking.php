@@ -9,5 +9,24 @@ class Booking extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'start', 'end'];
+    protected $fillable = [
+        'title',
+        'start',
+        'end',
+        'host_user_id',
+        'participant_email',
+        'zoom_meeting_id',
+        'zoom_meeting_url',
+        'zoom_meeting_password',
+        'waiting_room',
+        'max_participants'
+    ];
+
+    /**
+     * この予約に参加登録したユーザー
+     */
+    public function participants()
+    {
+        return $this->hasMany(MeetingParticipant::class);
+    }
 }

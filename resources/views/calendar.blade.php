@@ -3,6 +3,9 @@
 @section('content')
     <div class="container">
         <h2>予約カレンダー</h2>
+        <div class="mb-3">
+            <a href="{{ route('bookings.list') }}" class="btn btn-info">予約一覧を表示</a>
+        </div>
         <div id="calendar"></div>
     </div>
 
@@ -25,6 +28,14 @@
                     {{ sprintf('%02d:00', $hour + 1) }}</option>
             @endfor
         </select>
+
+        <label class="modal-label">参加者メールアドレス:</label>
+        <input type="email" id="participantEmail" class="modal-input" placeholder="参加者のメールアドレス">
+
+        <div class="modal-checkbox">
+            <input type="checkbox" id="waitingRoom" checked>
+            <label for="waitingRoom">待機室を有効にする</label>
+        </div>
 
         <div class="modal-actions">
             <button id="saveBooking" class="btn btn-primary">予約する</button>
@@ -175,10 +186,16 @@
                     ("0" + endDateTime.getHours()).slice(-2) + ":" +
                     ("0" + endDateTime.getMinutes()).slice(-2) + ":00";
 
+                // Zoom関連の情報を取得
+                var participantEmail = document.getElementById('participantEmail').value;
+                var waitingRoom = document.getElementById('waitingRoom').checked;
+
                 console.log("送信データ:", JSON.stringify({
                     title: "予約",
                     start: formattedStart,
-                    end: formattedEnd
+                    end: formattedEnd,
+                    participant_email: participantEmail,
+                    waiting_room: waitingRoom
                 }));
 
                 fetch('/bookings', {
@@ -191,7 +208,9 @@
                         body: JSON.stringify({
                             title: "予約",
                             start: formattedStart,
-                            end: formattedEnd
+                            end: formattedEnd,
+                            participant_email: participantEmail,
+                            waiting_room: waitingRoom
                         })
                     })
                     .then(response => response.json())
