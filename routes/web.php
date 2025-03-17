@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingApiController;
 use App\Http\Controllers\MeetingParticipantController;
+use App\Http\Controllers\ZoomSignatureController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -38,6 +39,7 @@ Route::middleware('auth')->group(function () {
     // 🔹 予約削除ルート（管理画面から使用）
     Route::delete('/bookings/{id}', [BookingApiController::class, 'destroy'])->name('bookings.destroy');
 });
-
+// JWT 署名を生成
+Route::get('/api/zoom-signature', [ZoomSignatureController::class, 'generate']);
 
 require __DIR__ . '/auth.php';
