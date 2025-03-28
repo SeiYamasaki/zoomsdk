@@ -14,10 +14,23 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://source.zoom.us/3.12.0/lib/vendor/react.min.js"></script>
+    <script src="https://source.zoom.us/3.12.0/lib/vendor/react-dom.min.js"></script>
+    <script src="https://source.zoom.us/3.12.0/lib/vendor/redux.min.js"></script>
+    <script src="https://source.zoom.us/3.12.0/lib/vendor/redux-thunk.min.js"></script>
+    <script src="https://source.zoom.us/3.12.0/lib/vendor/lodash.min.js"></script>
+    <script src="https://source.zoom.us/3.12.0/zoom-meeting-embedded-3.12.0.min.js"></script>
+    <!-- 強制的に白背景にする -->
+    <style>
+        body {
+            background-color: #ffffff !important;
+            color: #333;
+        }
+    </style>
 </head>
 
 <body class="font-sans antialiased">
-    <div class="min-h-screen bg-gray-100">
+    <div class="min-h-screen bg-white">
         @include('layouts.navigation')
 
         <!-- Page Heading -->
@@ -30,7 +43,7 @@
         @endisset
 
         <!-- Page Content -->
-        <main>
+        <main class="min-h-screen py-12 px-4">
             @yield('content')
         </main>
 

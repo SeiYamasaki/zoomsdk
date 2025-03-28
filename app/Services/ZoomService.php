@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class ZoomService
 {
@@ -15,12 +14,11 @@ class ZoomService
 
     public function __construct()
     {
-        $this->clientId = trim(env('ZOOM_CLIENT_ID', ''));
-        $this->clientSecret = trim(env('ZOOM_CLIENT_SECRET', ''));
-        $this->accountId = trim(env('ZOOM_ACCOUNT_ID', ''));
-        $this->baseUrl = env('ZOOM_API_BASE_URL', 'https://api.zoom.us/v2');
+        $this->clientId = config('services.zoom.client_id');
+        $this->clientSecret = config('services.zoom.client_secret');
+        $this->accountId = config('services.zoom.account_id');
+        $this->baseUrl = config('services.zoom.api_base_url', 'https://api.zoom.us/v2');
 
-        // `.env` の設定がない場合はエラーログを記録
         if (empty($this->clientId) || empty($this->clientSecret) || empty($this->accountId)) {
             Log::error('Zoom API credentials are missing', [
                 'ZOOM_CLIENT_ID' => $this->clientId ?: 'Not Set',
@@ -30,12 +28,8 @@ class ZoomService
         }
     }
 
-    /**
-     * Zoom API のアクセストークンを取得
-     */
     private function getAccessToken()
     {
-        // `.env` の設定がない場合、処理を停止
         if (empty($this->clientId) || empty($this->clientSecret) || empty($this->accountId)) {
             return [
                 'error' => 'Zoom API credentials are missing',
@@ -45,7 +39,6 @@ class ZoomService
             ];
         }
 
-        // Zoom API に認証リクエストを送信
         $response = Http::asForm()->withHeaders([
             'Authorization' => 'Basic ' . base64_encode("{$this->clientId}:{$this->clientSecret}"),
             'Content-Type' => 'application/x-www-form-urlencoded',
@@ -54,7 +47,6 @@ class ZoomService
             'account_id' => $this->accountId,
         ]);
 
-        // API レスポンスのデバッグ（エラー時）
         if ($response->failed()) {
             Log::error('Failed to obtain Zoom API access token', [
                 'status' => $response->status(),
@@ -70,14 +62,10 @@ class ZoomService
         return $response->json()['access_token'] ?? null;
     }
 
-    /**
-     * Zoom ミーティングを作成
-     */
     public function createMeeting($topic = 'Laravel Zoom Meeting', $startTime = null)
     {
         $accessToken = $this->getAccessToken();
 
-        // アクセストークンが取得できなかった場合のエラーハンドリング
         if (!$accessToken || !is_string($accessToken)) {
             Log::error('Invalid or missing access token', [
                 'access_token' => $accessToken
@@ -91,7 +79,7 @@ class ZoomService
         $response = Http::withToken($accessToken)
             ->post("{$this->baseUrl}/users/me/meetings", [
                 'topic' => $topic,
-                'type' => 2, // 予約ミーティング
+                'type' => 1,
                 'start_time' => $startTime ?? now()->toIso8601String(),
                 'duration' => 60,
                 'timezone' => 'Asia/Tokyo',
@@ -99,11 +87,14 @@ class ZoomService
                 'settings' => [
                     'host_video' => true,
                     'participant_video' => true,
-                    'waiting_room' => true,
+                    'waiting_room' => false,           // ✅ SDK接続を妨げないように無効化
+                    'join_before_host' => true,        // ✅ SDKでホストより先に入室可能に
+                    'mute_upon_entry' => true,
+                    'approval_type' => 0,
+                    'auto_recording' => 'cloud',
                 ],
             ]);
 
-        // API リクエストのエラーハンドリング
         if ($response->failed()) {
             Log::error('Zoom API request failed', [
                 'status' => $response->status(),
@@ -119,14 +110,10 @@ class ZoomService
         return $response->json();
     }
 
-    /**
-     * Zoom ミーティングの詳細を取得
-     */
     public function getMeeting($meetingId)
     {
         $accessToken = $this->getAccessToken();
 
-        // アクセストークンが取得できなかった場合のエラーハンドリング
         if (!$accessToken || !is_string($accessToken)) {
             Log::error('Invalid or missing access token for getting meeting details', [
                 'access_token' => $accessToken
@@ -157,14 +144,10 @@ class ZoomService
         }
     }
 
-    /**
-     * Zoom ミーティングを削除
-     */
     public function deleteMeeting($meetingId)
     {
         $accessToken = $this->getAccessToken();
 
-        // アクセストークンが取得できなかった場合のエラーハンドリング
         if (!$accessToken || !is_string($accessToken)) {
             Log::error('Invalid or missing access token for deleting meeting', [
                 'access_token' => $accessToken

@@ -6,13 +6,14 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingApiController;
 use App\Http\Controllers\MeetingParticipantController;
 use App\Http\Controllers\ZoomSignatureController;
+use App\Http\Controllers\MeetingController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 Route::get('/calendar', [BookingController::class, 'index'])->name('calendar');
 Route::get('/bookings', [BookingApiController::class, 'index']);
-Route::post('/bookings', [BookingApiController::class, 'store']);
+// Route::post('/bookings', [BookingApiController::class, 'store']);
 Route::delete('/bookings/{id}', [BookingApiController::class, 'destroy']);
 
 // 予約一覧取得のためのAPIルート
@@ -41,5 +42,29 @@ Route::middleware('auth')->group(function () {
 });
 // JWT 署名を生成
 Route::get('/api/zoom-signature', [ZoomSignatureController::class, 'generate']);
+Route::post('/zoom-signature', [ZoomSignatureController::class, 'generate']);
+
+// Meeting SDKルート
+// 例：routes/web.php
+Route::get('/meetings/join/{booking}', function (App\Models\Booking $booking) {
+    return view('meetings.join', [
+        'meetingId' => $booking->zoom_meeting_id,
+        'meetingPassword' => $booking->zoom_meeting_password,
+    ]);
+})->name('meetings.join');
+
+
+Route::get('/debug-zoom-key', function () {
+    dd(config('services.zoom.sdk_key'));
+});
+
+
+Route::get('/debug-zoom-secret', function () {
+    return response()->json([
+        'sdk_key' => config('services.zoom.sdk_key'),
+        'sdk_secret' => config('services.zoom.sdk_secret')
+    ]);
+});
+
 
 require __DIR__ . '/auth.php';

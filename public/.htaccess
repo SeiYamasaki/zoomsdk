@@ -22,4 +22,53 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Optimize Performance: Disable ETags
+    <IfModule mod_headers.c>
+        Header unset ETag
+        FileETag None
+    </IfModule>
+
+    # Enable Gzip Compression
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/javascript application/json
+        AddOutputFilterByType DEFLATE image/svg+xml
+    </IfModule>
+
+    # Enable Browser Caching
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        ExpiresDefault "access plus 1 month"
+        ExpiresByType text/css "access plus 1 week"
+        ExpiresByType text/javascript "access plus 1 week"
+        ExpiresByType application/javascript "access plus 1 week"
+        ExpiresByType image/jpeg "access plus 1 month"
+        ExpiresByType image/png "access plus 1 month"
+        ExpiresByType image/gif "access plus 1 month"
+        ExpiresByType application/pdf "access plus 1 month"
+    </IfModule>
+
+    # Security Headers
+    <IfModule mod_headers.c>
+        Header always set X-Content-Type-Options "nosniff"
+        Header always set X-Frame-Options "SAMEORIGIN"
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+        Header always set Permissions-Policy "interest-cohort=()"
+        Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+    </IfModule>
+
+    # CORS Configuration (Adjusted for Zoom SDK)
+    <IfModule mod_headers.c>
+        Header always set Access-Control-Allow-Origin "https://source.zoom.us"
+        Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With"
+    </IfModule>
+
+    # Prevent Access to Sensitive Files
+    <FilesMatch "(\.env|\.htaccess|composer\.json|artisan|server\.php|\.git)">
+        Order Allow,Deny
+        Deny from all
+    </FilesMatch>
+    
+
 </IfModule>

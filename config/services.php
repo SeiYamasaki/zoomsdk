@@ -46,6 +46,9 @@ return [
         'client_id' => env('ZOOM_CLIENT_ID'),
         'client_secret' => env('ZOOM_CLIENT_SECRET'),
         'api_base_url' => env('ZOOM_API_BASE_URL', 'https://api.zoom.us/v2/'),
+        'sdk_key' => env('ZOOM_MEETING_SDK_KEY'),
+        'sdk_secret' => env('ZOOM_MEETING_SDK_SECRET'),
+        
     ],
 
 ];
